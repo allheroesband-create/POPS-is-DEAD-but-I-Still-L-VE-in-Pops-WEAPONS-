@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>記事タイトル</title>
+    <style>
+        .text-block {
+            text-align: center;
+        }
+        /* ——— base style ——— */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Hiragino Kaku Gothic ProN','メイリオ','Meiryo',sans-serif;
+            line-height: 2; color: #e0e0e0; background: #000; padding: 0; cursor: none;
+        }
+
+        #cursor {
+            position: fixed; width: 12px; height: 12px; pointer-events: none; z-index: 9999;
+            transform: translate(-50%,-50%);
+            background: radial-gradient(circle,#fff 0%,#fff 40%,#ffeecc 70%,transparent 100%);
+            box-shadow: 0 0 15px #fff,0 0 30px #fff,0 0 45px #ffeecc;
+            clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);
+            animation: starMorph 2s ease-in-out infinite;
+        }
+
+        @keyframes starMorph {
+            0%,100% { clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+            25% { clip-path: polygon(50% 5%,65% 30%,95% 40%,70% 55%,85% 90%,50% 75%,15% 90%,30% 55%,5% 40%,35% 30%); }
+            50% { clip-path: polygon(50% 2%,58% 38%,96% 32%,66% 60%,82% 88%,50% 68%,18% 88%,34% 60%,4% 32%,42% 38%); }
+            75% { clip-path: polygon(50% 8%,63% 33%,92% 38%,72% 58%,77% 93%,50% 72%,23% 93%,28% 58%,8% 38%,37% 33%); }
+        }
+
+        .cursor-trail { position: fixed; width: 4px; height: 4px; border-radius: 50%; pointer-events: none; z-index: 9998; animation: trailFade 2s ease-out forwards; }
+        @keyframes trailFade { 0%{ transform: scale(1); opacity:0.9 } 100%{ transform: scale(0); opacity:0 } }
+
+        .container { max-width:100%; margin:0; background:#000; }
+
+        .top-link { background:#000; padding:15px; text-align:center; border-bottom:1px solid #333; }
+        .top-link a {
+            color:#e0e0e0; text-decoration:none; font-size:1.5em; font-weight:900;
+            letter-spacing:0.3em; position:relative; z-index:2; font-family:'Impact','Arial Black',sans-serif;
+            font-style:italic; text-transform:uppercase; transform:skewX(-10deg); display:inline-block;
+            transition:color .3s;
+        }
+        .top-link a:hover { color:#fff; text-shadow:0 0 10px #9d00ff,0 0 20px #9d00ff; }
+
+        @keyframes firework {
+            0% { transform:translate(calc(-50% + var(--x)*0),calc(-50% + var(--y)*0)) scale(1); opacity:1; }
+            100% { transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(0); opacity:0; }
+        }
+        .firework-particle {
+            position:absolute; width:2px; height:2px; border-radius:50%; pointer-events:none;
+            animation:firework 1.2s ease-out forwards;
+        }
+
+        header { color:#fff; padding:10px; text-align:center; border-bottom:1px solid #333; }
+        h1 { font-size:1.4em; margin-bottom:15px; }
+        .meta { font-size:0.75em; color:#999; }
+
+        /* ===== タグセレクタ ===== */
+        .tag-selector {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: center;
+            font-size: 0.75em;
+        }
+        .tag-group {
+            background: #111;
+            border: 1px solid #333;
+            border-radius: 999px;
+            padding: 4px 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .tag-group label {
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-weight: 600;
+            color: #bbb;
+        }
+        .tag-group select {
+            background: #000;
+            color: #e0e0e0;
+            border: 1px solid #444;
+            border-radius: 999px;
+            padding: 2px 6px;
+            font-size: 0.75em;
+            outline: none;
+        }
+        .tag-group select:focus {
+            border-color: #9d00ff;
+            box-shadow: 0 0 6px rgba(157,0,255,0.6);
+        }
+
+        article { padding:0; }
+
+        .toolbar {
+            position:sticky; top:0; background:#111; padding:15px; border-bottom:1px solid #333;
+            display:flex; gap:10px; justify-content:center; z-index:100;
+        }
+        .toolbar button {
+            background:#333; color:#e0e0e0; border:1px solid #555; padding:8px 15px;
+            border-radius:3px; cursor:pointer; font-size:0.85em;
+        }
+
+        .content-block { padding:10px; border:1px solid transparent; transition:border-color .3s; position:relative; }
+        .content-block:hover { border-color:#444; }
+
+        .block-controls {
+            position:absolute; top:5px; right:5px; opacity:0; display:flex; gap:5px; transition:opacity .3s;
+        }
+        .content-block:hover .block-controls { opacity:1; }
+
+        .drag-handle { cursor:move; text-align:center; color:#555; font-size:0.8em; padding:5px; user-select:none; }
+        .content-block.dragging { opacity:0.5; }
+
+        .text-block h2 { color:#fff; font-size:0.9em; margin-bottom:10px; }
+        .text-block p { font-size:0.85em; margin-bottom:10px; }
+
+        .image-block img { max-width:100%; border:1px solid #333; }
+        .audio-block audio { width:100%; max-width:500px; }
+
+        /* 動画ブロック用 */
+        .video-block video {
+            width: 100%;
+            max-width: 600px;
+            border: 1px solid #333;
+            display: block;
+            margin: 0 auto;
+        }
+
+        footer { background:#2d3748; color:white; text-align:center; padding:10px; margin-top:20px; }
+
+        .upload-prompt { border:1px dashed #555; padding:20px; text-align:center; cursor:pointer; color:#666; }
+        input[type=file] { display:none; }
+    </style>
+</head>
+
+<body>
+    <div id="cursor"></div>
+
+    <div class="container">
+        <div class="top-link" id="topLink">
+            <a href="../spaceship3.html" target="_blank">SPACESHIP</a>
+        </div>
+
+        <header>
+            <h1><span lang="EN-US" style="font-size: 0.85em;">POPS is DEAD but I Still L</span><span style="font-size: 0.85em;">♡</span><span lang="EN-US" style="font-size: 0.85em;">VE in Pops!!!</span><div><span style="font-size: 19.04px;">―『WEAPONS』評 ―</span></div></h1>
+            <div class="meta">公開日: 2025年12月06日 | 著者: Radiator Springs</div>
+
+            <!-- MODE / AREA / AURA タグの指定 UI -->
+            <div class="tag-selector" style="margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; font-size: 0.75em;"><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">MODE:</span> <span style="color: #e0e0e0;">DEPARTURE</span></div><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">AREA:</span> <span style="color: #e0e0e0;">METROPOLIS</span></div><div style="background: rgb(17, 17, 17); border: 1px solid rgb(51, 51, 51); border-radius: 999px; padding: 4px 10px; color: rgb(187, 187, 187);"><span style="text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600;">AURA:</span> <span style="color: #e0e0e0;">SUNRISE</span></div></div>
+        </header>
+
+        
+
+        <!-- エクスポート名入力モーダル -->
+        <div id="exportModal" style="display: none; position: fixed; top: 0px; left: 0px; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.8); z-index: 10000; justify-content: center; align-items: center;">
+            <div style="background:#111; border:2px solid #9d00ff; border-radius:10px; padding:30px; max-width:500px; width:90%;">
+                <h3 style="color:#fff; margin-bottom:20px; text-align:center;">エクスポート設定</h3>
+                
+                <div style="margin-bottom:20px;">
+                    <label style="color:#bbb; display:block; margin-bottom:8px; font-size:0.9em;">HTMLファイル名:</label>
+                    <input type="text" id="htmlFileName" value="article" style="width:100%; padding:10px; background:#000; border:1px solid #444; border-radius:5px; color:#e0e0e0; font-size:1em;">
+                    <div style="color:#666; font-size:0.75em; margin-top:5px;">※ .html は自動的に追加されます</div>
+                </div>
+                
+                <div style="margin-bottom:30px;">
+                    <label style="color:#bbb; display:block; margin-bottom:8px; font-size:0.9em;">ZIPファイル名:</label>
+                    <input type="text" id="zipFileName" value="exported_page" style="width:100%; padding:10px; background:#000; border:1px solid #444; border-radius:5px; color:#e0e0e0; font-size:1em;">
+                    <div style="color:#666; font-size:0.75em; margin-top:5px;">※ .zip は自動的に追加されます</div>
+                </div>
+                
+                <div style="display:flex; gap:10px; justify-content:center;">
+                    <button onclick="cancelExport()" style="background:#333; color:#e0e0e0; border:1px solid #555; padding:10px 30px; border-radius:5px; cursor:pointer; font-size:1em;">キャンセル</button>
+                    <button onclick="confirmExport()" style="background:#9d00ff; color:#fff; border:none; padding:10px 30px; border-radius:5px; cursor:pointer; font-size:1em; font-weight:bold;">エクスポート</button>
+                </div>
+            </div>
+        </div>
+
+        <article id="editor" class="editor-container">
+            
+        <div class="content-block image-block">                        <img src="images/image_0_ChatGPT_Image_2025_12_6__13_59_16.png"></div><div class="content-block text-block">                        <h2><br></h2>            <p><p class="MsoNormal">感情を失ったゾンビたちに、キャンベルのスープ缶を飲ませる。ゾンビたちは形骸化したポップを口にすることで、生命を持続させ、大いなる何か（魔女）に奉仕し続ける。ゾンビは食材のようにピーラーで皮をむかれる。二回も！！<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal"><span lang="EN-US">2025</span>年．ポップはもう死んでいる。近代化とともにポップは生まれ、新しい世代の熱狂、また新しい世界のドリームとしてのポップは<span lang="EN-US">1962</span>年にマリリンモンローが死んで、アメリカが月を手にした（？）ときに絶頂を迎え、<span lang="EN-US">60</span>年代にビートルズ、ビーチボーイズとかたくさんの音楽がポップを熱狂とともにこの世界の外側に連れて行ってくれるものに読み替え、フラワームーブメントが到来。最後、<span lang="EN-US">10</span>年代のＩＴ、ＡＩドリームとともに地球規模で<span lang="EN-US">ED</span>Ｍとして死ぬ前の最後の花火が打ちあがった！コロナでその夢が打ち砕かれて、<span lang="EN-US">2025</span>年は新しいポップを求める。しかし考えれば、<span lang="EN-US">2025</span>、今では世界はとんでもないことに！<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal">例えば今、政治が僕らに課す実行原則は二つのタイプがある、政治は二つ存在している。従来の政治、税金を払って自由が保障されるいわゆる国家といったもの、そしてそれともう一つ、世界に十数人ほどのテック大富豪が世界中に無料でサービスを公開し情報の束を数学的処理をこなして動かす、テック政治ＡＩ、ＳＮＳ，プラットフォーム。<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal">電車に乗ろう。頭を下向かせ光を浴びる不幸なゾンビ。ＳＮＳは人類の熱狂の種である「ライド感」を手にすべてのポップを形骸化させドーパミンの光の粒としてぼくらに与え続ける。そこではすべてのポップは外をめざす熱狂を忘れ、また月曜の朝も眠ろうとする永遠を忘れ、パックとして光の上で簡素なライドとして配置され、ポップは形骸化する。<span lang="EN-US"><o:p></o:p></span></p><p class="MsoNormal">「<span lang="EN-US">WEAPONS</span>」では魔女が書いたコードによりゾンビたちが行動を起こす。そのゾンビの燃料としてあるのが<span lang="EN-US">Andy</span>がポップとして熱を吹き込んだキャンベルのスープ缶だった。僕らは魔女にどう立ち向かおう。てかそもそも魔女は外部の存在として内部のルールを壊すものでもあったはずだ。フラワームーブメントでは占星術が一つの大事な要素でもあった。<span lang="EN-US"><o:p></o:p></span></p><p class="MsoNormal">
+
+</p><p class="MsoNormal">現代において、新しい魔術として登場するのがまさに<span lang="EN-US">AI</span>。それこそ、リール動画でこういうのを見たことないだろうか。神学者？魔術師？教祖？みたいな人が<span lang="EN-US">AI</span>に指令を出し、魔術を起こすような動画を。多くの人は<span lang="EN-US">AI</span>の行動原理を知らず、新たに登場した相棒、秘書のようにとらえているだろう。まさに僕はこの<span lang="EN-US">spaceship.com</span>を作るとき、<span lang="EN-US">AI</span>を駆使しまくったのだが、自分がやりたいと思ったことを日本語で書いて、得られたコードをそのまんま張り付けて、多少の齟齬があるにしろ、思ったようなホームページが<span lang="EN-US">web</span>上に作成されたときには、魔術的な感動を覚えたものだ。インターネットやコンピューティングがもともとカウンターカルチャーとして登場したことからも、サイケデリックの進化系サイバーデリックとして登場したように、ＡＩやテックには魔女的神秘性が少なからず含まれているだろう。魔女、占星術は、実際それが及ぼした影響は置いといて、現実原則に隠された快楽原則を呼び起こす外を志向したものであったのにもかかわらず、今ではそれが内部の論理としてぼくらを導くようになるだろう。テックは外部からやってきて、もう内部の論理として、内部のもう一つの政治としてぼくらに降りかかる。僕らの趣味趣向、行動はデータベースに記録され、ぼくに似てるカテゴリーの人が選ぶものを僕らにお勧めして、個人を消去する。個人の多動、きちがい、狂人的、気まぐれな行動すらも外れ値として、そのデータベースの中にパックとして格納されちゃう！！<span lang="EN-US">AI</span>は相棒でもあるけど、<span lang="EN-US">AI</span>を提供する側のテックも<span lang="EN-US">AI</span>を使ってるわけで、そりゃまあポップは死んじゃうかもっていう。<span lang="EN-US"><o:p></o:p></span></p></p></div><div class="content-block text-block">                        <h2><p class="MsoNormal"><br></p></h2>            <p><p class="MsoNormal">ぼくは今ローリングストーンズの<span lang="EN-US">stanic majesties </span>を聞きながら本論を書いている。<span lang="EN-US"><o:p></o:p></span></p></p></div><div class="content-block text-block">                        <h2><br></h2>            <p><p class="MsoNormal">この映画においての魔女は外部から現れる。幸せなアレックスの家に突如やってくる謎の伯母という形で。だがその伯母はその家を乗っ取り、町の子供を乗っ取り、邪魔するものを乗っ取り、ゾンビ化させ、意味をもう持たないスープ缶を与え、自分のために動かさせる。ここでこの魔女をテック政治、<span lang="EN-US">AI</span>的なものとしてとらえることに不自然さはそうないだろう。ってか、そうとらえてからぼくらの加速は始まるんだよ！！それを裏付けるようにこの映画の舞台は一つの街に限りなく限定されている。このクラス全体の失踪事件が<span lang="EN-US">SNS</span>で拡散されるなんてシーンはないし、舞台は結構クラシックなアメリカの田舎町（<span lang="EN-US">80</span>年代とかのリンチとかの感じ）として描かれてる。この映画でスマホが単に携帯電話としてしか使用されていないのは、今のスマホ的な現実が構造として示されているから！<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal">じゃあ、そんな魔女の脅威に<span lang="EN-US">America</span>はどう立ち向かう。どうやってポップスの夢、熱狂を取り戻す。なぜ僕らはアメリカが大好きだったのか。なんで<span lang="EN-US">California Dreamin</span>を見てたのか。それはみんな言語内、外どちらにもいろんな理由があるとおもう。でも一個政治としてみるならば、トクヴィルが「アメリカのデモクラシー」でいったような、国政や州政がありはするけど、それぞれがそれぞれの家、ストリート、町を守ろうと動く結社が無数にある個人主義は大きいっしょ。社会的権利を待たずにトリマ自分たちで連帯して身を守るてきな。二年前くらいに<span lang="EN-US">LA</span>の<span lang="EN-US">Pasadena</span>の<span lang="EN-US">Airbnb</span>泊まった時に食らった、一人ひとりが一軒家と庭と自家用車という城を作って、番犬が庭にいるやばさなんてまさにそれ。そんな一つの<span lang="EN-US">American Dream</span>がこの映画には色濃く反映されている。１パート<span lang="EN-US">30</span>分くらいの群像劇の構造になっていて、あらゆるアメリカ的視点からこの事件について謎の縁取りを時間をも超えながら語られる。リベラル女教師ジャスティン、保守労働者で父のアーチャー、ホームレスクラックヘッズジェームス、ゲイ<span lang="EN-US">Asian</span>校長マ、熱狂、恋の消えた今の冷たさを一挙に背負うポリポール、そして子供アレックスへと。<span lang="EN-US"><o:p></o:p></span></p></p></div><div class="content-block image-block">                        <img src="images/image_1_IMG_0552.jpg"></div><div class="content-block text-block">                        <h2><br></h2>            <p><p class="MsoNormal">ストーンズ終わった。<span lang="EN-US">Sly</span>の<span lang="EN-US">there’s
+a riot goin on </span>へ。一回外に出てタバコ吸ってくる。<span lang="EN-US"><o:p></o:p></span></p></p></div><div class="content-block text-block">                        <h2><br></h2>            <p><p class="MsoNormal">この映画では、社会的権利、特に警察、学校は静観を続け、時を流しているだけであり、各視点それぞれがそれぞれのやりかたで隠れた魔女の存在を浮かばせようと翻弄し、違った視点同士が対立したかと思えば協力したりする古き良きアメリカの民主主義が描かれる。リベラル女教師の車に赤いインクで<span lang="EN-US">WITCH</span>と落書きをした保守サノスは<span lang="EN-US">M4A1</span>が空に浮かぶ夢を見て、娘への愛から、娘を救いたいという気持ちから、リベラル女教師と協力する。きわめて現代の歯車的な、妻との冷え切った恋と、いつの間にかの人生の束縛、空洞を抱えたＰは、クラシックな方法（手癖の悪い窃盗、シャブ、テント）で社会をサバイブするホームレスと、空洞対決をして、空洞チェイスをして奇妙な契約を結び、魔女の本拠地にともに乗り込む。公権力を待ってたら進まないペインを自分たちで切り開こうとする人々がそのバックグラウンドを超え、共同体を広げていく。その視点はコーラの炭酸のようにはじけるアメリカ的希望が感じられる。魔女にとらえられないココロでの共同体によって、魔女の実像を浮かび上がらせるのだ！！！！だがクラシックアメリカもその大きな魔術によってほとんどが取り込まれてしまった。だけど忘れてない？この映画は子供に始まり、子供に終わり、語り手は、保守サノスの娘。これは子供の映画でしょ。<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal">冒頭の<span lang="EN-US">2</span>：<span lang="EN-US">17</span>で子供たちが外に駆け出すシーンを見て高揚感を覚えるが、その高揚感が魔女の高揚として書き換えられてしまうのが映画の終盤だった。魔女のコードによって走っていただけだったと。だけれども、その高揚感を再び書き直してさらにバチイケの高揚感としてくらわしてくれるのがラストシーン。素晴らしい。両手を広げ風をうけ走るその姿はモーター姿から、エネルギー的なものに置き換わる。加速が質量をもち力として、エネルギーとして再び現れるのだ。これはアレックスが、ＡＩによって奪われた愛（<span lang="EN-US">ai</span>）、を取り戻す物語だ。<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal">アレックスは本当にかわいそうだった。クラスでいじめられ、遊びから疎外されて、救いであった帰り道の父親との車内での性についての会話、母親の温かい料理すらも魔女に奪われて、居場所がなくなってしまう。でもこいつは愛を忘れなかったし、それを取り戻そうとした。魔女は父母を人質にアレックスを完全に弟子のように扱う。自分の目的を実行するための仮面として。アレックスはクラスメイトが遊んでる中、遊びから疎外される中、伯母の目的のために彼ら彼女らの私物を青いリュックサックにつめこむ。そんな遊びから疎外されてたアレックスは父母への愛を守るために、自分をいじめて疎外した彼ら（今では情動の消えた空のポップを飲み込むゾンビ）に今度は遊びを提供する。「町じゃない、地球、大地で遊べ。町を壊せ、走れ、跳べ！ぼくらを操るあいつを殺そう！」って、魔女の書いたコードを書き換える。魔女を殺すために。そうよ！魔女、テックは本来、＜遊び＞を提供するものでもなければならない。それが外に向かう純粋な人間の情動である限り。<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal">このラストシーンは、クラシックアメリカの連帯では超えきれなかったものを、子供の熱狂が軽々と超えてしまう感動がある。それが新しくてバチバチなの。クラシックアメリカはもちろん素晴らしいが、地図を超えられない、ある意味で現実原則を超えられない。そこを超えなきゃこの魔女ほどの脅威はもう倒せない。だから地図に定規で線を引いて車で道を走ることでしか魔女の居場所をつかめない。だが<span lang="EN-US">kids</span>はそれを破壊するライドを作り出した。デススターの中心一点、魔女に向かう熱狂的なライドを。アメリカ的個人主義、庭と家を窓ガラスを突き破りながら、直線に地図を破壊して突っ走り、魔女の頭を引き裂こうとする遊び。その遊びは、アレックスが魔女の論理によって奪われた愛を、魔女の論理で今度は「遊び」を作り出すことで、取り戻そうとしたことによって生まれた。ふと思い出したが、バタイユには「魔法使いの弟子」という小説がある。アレックスはある意味魔法使いの弟子だよね。ここで一発、引用はさんでいきましょう！<span lang="EN-US"><o:p></o:p></span></p></p></div><div class="content-block text-block">                        <h2><br></h2>            <p><p class="MsoNormal" align="center" style="margin: 0mm 22pt 8pt;">この解体した世界のなかでは、≪愛する存在≫こそが、生命の熱へ人を返す美徳を保ち続ける唯一の力になったのだ。もしもこの世界のなかで、互いに求め合う恋人たちの痙攣的な動きの行き来がなくなるのならば、そしてもしも≪その顔が見えなくなると心が苦しくなる≫、そんな顔がこの世界を輝かしく変容させることがなくなるならば、この世界の眺めは、世界自身が生み出した存在たちを自ら愚弄する光景になる。〔…〕一人の人間をその心の奥底でとらえているあの失われたもの、悲劇的なもの、つまり≪目をくらませる驚異≫は、もはやベッドの上でしか出会えなくなっている。〔…〕心のむなしさがどこまでも広がる大洋のなかで、鍵のかけられた寝室はどれも小島になって、生の表情に活気を取り戻させている。<span lang="EN-US"><o:p></o:p></span></p></p></div><div class="content-block text-block">                        <h2><br></h2>            <p>歌った。ビートルズのIn My Life</p></div><div class="content-block audio-block">                        <audio controls="" src="audio/audio_0_in_my_life.wav"></audio></div><div class="content-block text-block">                        <h2><br></h2>            <p><p class="MsoNormal" style="margin-right:22.0pt;mso-para-margin-right:2.0gd">さあ永遠のもと、ぼくらはこの文章の締めに入っていく。<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="margin-right:22.0pt;mso-para-margin-right:2.0gd"><span lang="EN-US">2025</span>年テック資本主義はポップも魔女も外側もテックの中にパック化して、雑魚なライド、光源で個人を消した。外側から来た魔女は今やこの町を支配する見えない大きな論理として立ち上がる。ぼくらのクラシックアメリカは、バックグラウンドを書き換えて新しく手を取り合い町の中を車で、魔女の首に迫る。だが、あと一歩届かない。ゾンビの皮をはいでもそれはゾンビのままであった。<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" style="margin-right:22.0pt;mso-para-margin-right:2.0gd">そして、アレックス。彼は遊びから疎外され家族からも疎外させられ、魔法使いの弟子となる。だけど、あいつは愛を遊びを忘れなかった。魔法を使って、疎外した側のクラスメイトに、町を壊せと、走れ、踊れ、叫べと魔女のコードを遊びのコードに書き換える。魔女に向かって。子供たちは、庭をかけ、窓を割り、リビングをかけ、窓を割り、ストリートに飛び出して、地図を壊して、走り、はねて、魔女の首を狙う。大人も子供も<span lang="EN-US">AI</span>を愛で倒そうとする、きな臭くも情熱的な愛の物語である。アレックスは愛を求めて魔法使いの弟子として、魔女の支配のコードを〈遊び〉のコードに書き換えた。そして魔女の支配が終わり抜け殻となった両親にハグ、愛で包み込む。</p>
+
+<p class="MsoNormal" style="margin-right:22.0pt;mso-para-margin-right:2.0gd">この映画は終わりも素晴らしい。魔女を殺したのち、意識が戻らなかった子供もいるらしい。だけど、保守サノスの娘がしゃべれるようになり、この事件を物語として語っていることは僕らに伝わってくる。それは、クラシックアメリカの大きな娘への愛が、道路で魔女の死体が腐敗していく前で立ち尽くす娘への熱い抱擁が、子供を支えていて、過剰な熱狂から冷血にひっくり返す魔女のライド論理をアメリカのハグという愛が包み込んだからである。<span lang="EN-US"><o:p></o:p></span></p>
+
+<p class="MsoNormal" align="center" style="margin-right: 22pt;">ライドと愛、遊び、<span lang="EN-US">POPS<o:p></o:p></span></p>
+
+<p class="MsoNormal" style="margin-right:22.0pt;mso-para-margin-right:2.0gd">Merry Christmas!!! みんなの<span lang="EN-US">2025</span>年はどうだった？<span lang="EN-US"><o:p></o:p></span></p></p></div></article>
+
+        <footer>
+            <p>© 2025 HOME///SPACESHIP. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- JSZip -->
+    
+
+    
+
+
+</body></html>
